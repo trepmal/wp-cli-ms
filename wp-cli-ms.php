@@ -26,6 +26,11 @@ class WP_MS_QUICKLOOK extends WP_CLI_Command {
 	 *
 	 */
 	function plugins( $args, $assoc_args ) {
+
+		if ( ! is_multisite() ) {
+			WP_CLI::error( 'Must be multisite.' );
+		}
+
 		global $wpdb;
 
 		$allblogs = $wpdb->get_results( $wpdb->prepare("SELECT blog_id, domain, path FROM $wpdb->blogs WHERE site_id = %d AND public = '1' AND archived = '0' AND mature = '0' AND spam = '0' AND deleted = '0' ORDER BY registered DESC", $wpdb->siteid), ARRAY_A );
@@ -110,6 +115,11 @@ class WP_MS_QUICKLOOK extends WP_CLI_Command {
 	 *
 	 */
 	function themes( $args, $assoc_args ) {
+
+		if ( ! is_multisite() ) {
+			WP_CLI::error( 'Must be multisite.' );
+		}
+
 		global $wpdb;
 
 		$allblogs = $wpdb->get_results( $wpdb->prepare("SELECT blog_id, domain, path FROM $wpdb->blogs WHERE site_id = %d AND public = '1' AND archived = '0' AND mature = '0' AND spam = '0' AND deleted = '0' ORDER BY registered DESC", $wpdb->siteid), ARRAY_A );
