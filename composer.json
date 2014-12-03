@@ -1,0 +1,12 @@
+{
+	"name": "trepmal/wp-cli-ms",
+	"description": "Quicklook at themes and plugins at multisite",
+	"homepage": "https://github.com/trepmal/trepmal/wp-cli-ms",
+	"license": "MIT",
+	"require": {
+		"php": ">=5.4"
+	},
+	"autoload": {
+		"files": [ "wp-cli-ms.php" ]
+	}
+}
