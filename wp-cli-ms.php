@@ -51,22 +51,21 @@ class WP_MS_QUICKLOOK extends WP_CLI_Command {
 			$allplugins = array_intersect_key( $allplugins, $find );
 		}
 		// get plugin names
-		$_plugin_legend = $plugin_legend = array_values( wp_list_pluck( $allplugins, 'Name' ) );
+		$plugin_slugs = array_keys( $allplugins );
 
 		// get network-activated plugins
 		$_network_plugins = (array) get_site_option( 'active_sitewide_plugins', array() );
 		$network_plugins = array_intersect_key( $allplugins, $_network_plugins );
-		$network_plugin_names = array_values( wp_list_pluck( $network_plugins, 'Name' ) );
 
 		// build a legend using full plugin names and key-based abbrvs
 		// e.g. array( 0 => 'Akismet') would become array( key => p0, name => Akismet )
-		$legend = $nalegend = array();
-		$total = count( $_plugin_legend );
-		foreach( $_plugin_legend as $_plk => $_plv ) {
+		$legend = array();
+		$total = count( $plugin_slugs );
+		foreach( $plugin_slugs as $_plk => $slug ) {
 			$k = $_plk;
-			$v = $_plv;
+			$v = $allplugins[ $slug ]['Name'];
 			// net-act: colorize, add paren, bump to end
-			if ( in_array( $v, $network_plugin_names ) ) {
+			if ( in_array( $slug, array_keys( $network_plugins ) ) ) {
 				$k = "%rp$k%n";
 				$v = "%r$v (network activated)%n";
 				$_plk += $total; // push to end of list
@@ -109,10 +108,8 @@ class WP_MS_QUICKLOOK extends WP_CLI_Command {
 
 			// iterate over each active plugin, update column in row as needed
 			foreach( $plugins as $plugin ) {
-				$fullpath = WP_PLUGIN_DIR. '/' . $plugin;
-				$deets = get_plugin_data( $fullpath );
 
-				if ( false !== ( $key = array_search( $deets['Name'], $plugin_legend ) ) ) {
+				if ( false !== ( $key = array_search( $plugin, $plugin_slugs ) ) ) {
 					$hasplugins = true;
 					$blog_list[ $blog_id ][ "p$key" ] = 'X';
 				}
