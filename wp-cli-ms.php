@@ -37,6 +37,7 @@ class WP_MS_QUICKLOOK extends WP_CLI_Command {
 		$blog_list = wp_list_pluck( $allblogs, 'blog_id', 'blog_id');
 
 		$find = array();
+		// did we specify a limited set of plugins...
 		if ( isset( $args[0] ) ) {
 			$this->fetcher = new \WP_CLI\Fetchers\Plugin;
 			$find = $this->fetcher->get_many( $args );
@@ -44,38 +45,69 @@ class WP_MS_QUICKLOOK extends WP_CLI_Command {
 		}
 
 		$allplugins = get_plugins();
-		if ( $find ) {
-			$allplugins = array_intersect_key($allplugins, $find );
-		}
 
-		$plugin_legend = array_values( wp_list_pluck( $allplugins, 'Name' ) );
-		$_plugin_legend = $plugin_legend;
-		$legend = array();
-		foreach( $_plugin_legend as $_plk => $_plv ) {
-			$legend[] = array( 'key' => "p$_plk", 'name' => $_plv );
-			$plugin_legend_keys["p$_plk"] = '';
+		// if we specified which plugin(s) to look for, reduce our list
+		if ( $find ) {
+			$allplugins = array_intersect_key( $allplugins, $find );
 		}
+		// get plugin names
+		$_plugin_legend = $plugin_legend = array_values( wp_list_pluck( $allplugins, 'Name' ) );
+
+		// get network-activated plugins
+		$_network_plugins = (array) get_site_option( 'active_sitewide_plugins', array() );
+		$network_plugins = array_intersect_key( $allplugins, $_network_plugins );
+		$network_plugin_names = array_values( wp_list_pluck( $network_plugins, 'Name' ) );
+
+		// build a legend using full plugin names and key-based abbrvs
+		// e.g. array( 0 => 'Akismet') would become array( key => p0, name => Akismet )
+		$legend = $nalegend = array();
+		$total = count( $_plugin_legend );
+		foreach( $_plugin_legend as $_plk => $_plv ) {
+			$k = $_plk;
+			$v = $_plv;
+			// net-act: colorize, add paren, bump to end
+			if ( in_array( $v, $network_plugin_names ) ) {
+				$k = "%rp$k%n";
+				$v = "%r$v (network activated)%n";
+				$_plk += $total; // push to end of list
+			} else {
+				$k = "p$k";
+				$plugin_legend_keys[ $k ] = '';
+			}
+			$legend[ $_plk ] = array( 'key' => $k, 'name' => $v );
+		}
+		ksort( $legend );
 
 		// output legend
 		$formatter = new \WP_CLI\Formatter( $assoc_args, array( 'key', 'name' ), 'stash' );
 		$formatter->display_items( $legend );
 
+		// iterate over every blog on the network
 		foreach ( $allblogs as $blog ) {
 			$blog_id = $blog['blog_id'];
 
+			// start builing the table. For the headings we want ID, Blog Name, and each plugin abbreviation
 			$keys = array_merge( array( 'id' => '', 'blog_name' => '' ), $plugin_legend_keys );
 
+			// set up our keys (columns) for the current blog (row)
 			$blog_list[ $blog_id ] = $keys;
+			// and insert the blog id for current row
 			$blog_list[ $blog_id ]['id'] = $blog_id;
 
 			switch_to_blog( $blog_id );
+			// fetch the blog name and insert into the row
 			$blog_list[ $blog_id ]['blog_name'] = get_bloginfo('name');
 
+			// find the options table
 			$blog_tables = $wpdb->tables('blog');
+			// get the value
 			$plugins = $wpdb->get_var( $wpdb->prepare("SELECT option_value FROM {$blog_tables['options']} WHERE option_name = %s", 'active_plugins' ) );
+			// unserizialize plugin list
 			$plugins = maybe_unserialize( $plugins );
 
-			$hasplugins = false;
+			$hasplugins = false; // flag
+
+			// iterate over each active plugin, update column in row as needed
 			foreach( $plugins as $plugin ) {
 				$fullpath = WP_PLUGIN_DIR. '/' . $plugin;
 				$deets = get_plugin_data( $fullpath );
@@ -87,6 +119,7 @@ class WP_MS_QUICKLOOK extends WP_CLI_Command {
 
 			}
 
+			// if no plugins, hide row when requested
 			if ( ! $hasplugins && isset( $assoc_args['hide_empty'] ) ) {
 				unset( $blog_list[ $blog_id ] );
 			}
@@ -95,6 +128,8 @@ class WP_MS_QUICKLOOK extends WP_CLI_Command {
 		}
 
 		ksort( $blog_list );
+
+		// output table
 		$formatter = new \WP_CLI\Formatter( $assoc_args, array_keys( $keys ), 'stash' );
 		$formatter->display_items( $blog_list );
 
