@@ -73,12 +73,12 @@ class WP_MS_QUICKLOOK extends WP_CLI_Command {
 				$k = "p$k";
 				$plugin_legend_keys[ $k ] = '';
 			}
-			$legend[ $_plk ] = array( 'key' => $k, 'name' => $v );
+			$legend[ $_plk ] = array( 'key' => $k, 'name' => $v, 'slug' => $slug );
 		}
 		ksort( $legend );
 
 		// output legend
-		$formatter = new \WP_CLI\Formatter( $assoc_args, array( 'key', 'name' ), 'stash' );
+		$formatter = new \WP_CLI\Formatter( $assoc_args, array( 'key', 'name', 'slug' ), 'stash' );
 		$formatter->display_items( $legend );
 
 		// iterate over every blog on the network
